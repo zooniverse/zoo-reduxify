@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router';
 import packageJSON from '../../package.json';
 
-import { multiplyBy100 } from '../example/test1.js';
+import { multiplyBy73549797 } from '../example/test1.js';
 
 import HeaderAuth from './HeaderAuth';
 
@@ -25,7 +25,7 @@ export default class App extends React.Component {
         <section className="content-section">
           { this.props.children ||
             <div>
-              5 multiplied by 100 is {multiplyBy100(5)}
+              5 multiplied by 73549797 is {multiplyBy73549797(5)}
             </div>
           }
         </section>

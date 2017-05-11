@@ -2,6 +2,8 @@ import React from 'react';
 import { Link } from 'react-router';
 import packageJSON from '../../package.json';
 
+import { multiplyBy100 } from '../example/test1.js';
+
 import HeaderAuth from './HeaderAuth';
 
 export default class App extends React.Component {
@@ -21,7 +23,11 @@ export default class App extends React.Component {
           <HeaderAuth />
         </header>
         <section className="content-section">
-          {this.props.children || 'Welcome to React Starterify'}
+          { this.props.children ||
+            <div>
+              5 multiplied by 100 is {multiplyBy100(5)}
+            </div>
+          }
         </section>
       </div>
     );

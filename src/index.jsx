@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { Router, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Route } from 'react-router-dom';
 import createHistory from 'history/createBrowserHistory';
 import { Provider } from 'react-redux';
 import oauth from 'panoptes-client/lib/oauth';
@@ -18,7 +18,7 @@ oauth.init(config.panoptesAppId)
   .then(() => {
     ReactDOM.render((
       <Provider store={store}>
-        <Router history={history}>
+        <Router>
           <Route path="/" component={App} />
         </Router>
       </Provider>),

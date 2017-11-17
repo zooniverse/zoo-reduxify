@@ -1,7 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { Link, Route, Switch } from 'react-router-dom';
-import { ZooniverseLogo } from 'zooniverse-react-components';
+import { ZooniverseLogo, ZooFooter } from 'zooniverse-react-components';
 
 import AuthContainer from '../containers/AuthContainer';
 import AboutLayout from './about';
@@ -22,6 +22,7 @@ export default function App() {
           <Route path="/about" component={AboutLayout} />
         </Switch>
       </section>
+      <ZooFooter />
     </div>
   );
 }

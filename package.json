@@ -35,6 +35,7 @@
     "redux-devtools-extension": "~2.13.2",
     "redux-logger": "~3.0.6",
     "redux-thunk": "~2.2.0",
+    "zoo-grommet": "~0.2.2",
     "zooniverse-react-components": "github:zooniverse/Zooniverse-React-Components#v0.7.0"
   },
   "devDependencies": {

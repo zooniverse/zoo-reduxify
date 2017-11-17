@@ -59,6 +59,12 @@ module.exports = {
         fallback: 'style-loader',
         use: {
           loader: 'css-loader',
+          options: {
+            includePaths: [
+              path.resolve(__dirname, 'node_modules/zoo-grommet/dist'),
+              path.resolve(__dirname, 'node_modules/zooniverse-react-components/lib')
+            ]
+          }
         },
       }),
     }, {

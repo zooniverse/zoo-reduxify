@@ -29,6 +29,9 @@ const FETCH_PROJECT_ERROR = 'zooniverse-data/FETCH_PROJECT_ERROR';
 const FETCH_WORKFLOW = 'zooniverse-data/FETCH_WORKFLOW';
 const FETCH_WORKFLOW_SUCCESS = 'zooniverse-data/FETCH_WORKFLOW_SUCCESS';
 const FETCH_WORKFLOW_ERROR = 'zooniverse-data/FETCH_WORKFLOW_ERROR';
+const FETCH_SUBJECT = 'zooniverse-data/FETCH_SUBJECT';
+const FETCH_SUBJECT_SUCCESS = 'zooniverse-data/FETCH_SUBJECT_SUCCESS';
+const FETCH_SUBJECT_ERROR = 'zooniverse-data/FETCH_SUBJECT_ERROR';
 
 const ZOODATA_STATUS = {
   IDLE: 'zooniverse-data/IDLE',
@@ -62,7 +65,12 @@ const DEFAULT_WORKFLOW_VALUES = {
   zooWorkflowStatusMessage: null,
 };
 
-const DEFAULT_SUBJECT_VALUES = {};
+const DEFAULT_SUBJECT_VALUES = {
+  zooSubjectId: null,
+  zooSubjectData: null,
+  zooSubjectStatus: ZOODATA_STATUS.IDLE,
+  zooSubjectStatusMessage: null,
+};
 const DEFAULT_CLASSIFICATION_VALUES = {};
 
 /*
@@ -74,7 +82,7 @@ const DEFAULT_CLASSIFICATION_VALUES = {};
 
 /*  ZOODATA_INITIAL_STATE defines the default/starting values of the Redux
     store. To use this in your Redux-connected React components, try...
-    
+
     Usage:
       MyReactComponent.defaultProps = {
         ...ZOODATA_INITIAL_STATE,
@@ -108,10 +116,10 @@ const ZOODATA_PROPTYPES = {
 
 const zoodataReducer = (state = ZOODATA_INITIAL_STATE, action) => {
   switch (action.type) {
-    
+
     // Projects
     // --------------------------------
-    
+
     case FETCH_PROJECT:
       return Object.assign({}, state, {
         zooProjectId: action.projectId,
@@ -136,7 +144,7 @@ const zoodataReducer = (state = ZOODATA_INITIAL_STATE, action) => {
         zooProjectStatus: ZOODATA_STATUS.ERROR,
         zooProjectStatusMessage: action.statusMessage,
       });
-    
+
     // Workflows
     // --------------------------------
 
@@ -166,10 +174,30 @@ const zoodataReducer = (state = ZOODATA_INITIAL_STATE, action) => {
 
     // Subjects
     // --------------------------------
-      
-    //TODO
+    case FETCH_SUBJECT:
+      return Object.assign({}, state, {
+        zooSubjectId: action.subjectId,
+        zooSubjectData: null,
+        zooSubjectStatus: ZOODATA_STATUS.FETCHING,
+        zooSubjectStatusMessage: null,
 
-    // --------------------------------
+        //Reset all Subject dependencies
+        ...DEFAULT_CLASSIFICATION_VALUES
+      });
+
+    case FETCH_SUBJECT_SUCCESS:
+      return Object.assign({}, state, {
+        zooSubjectData: action.subjectData,
+        zooSubjectStatus: ZOODATA_STATUS.SUCCESS,
+        zooSubjectStatusMessage: null
+      });
+
+    case FETCH_SUBJECT_ERROR:
+      return Object.assign({}, state, {
+        zooSubjectData: action.subjectData,
+        zooSubjectStatus: ZOODATA_STATUS.ERROR,
+        zooSubjectStatusMessage: action.statusMessage
+      });
 
     default:
       return state;
@@ -187,7 +215,7 @@ const zoodataReducer = (state = ZOODATA_INITIAL_STATE, action) => {
     object" for ease of importing between components.
  */
 const ZooData = {
-  
+
   /*  Fetches a Zooniverse project from Panoptes.
       projectId: ID of the project, as a string. e.g.: "1234"
       onSucccess: callback function when the fetch succeeds.
@@ -215,7 +243,7 @@ const ZooData = {
         });
     };
   },
-    
+
   /*  Fetches a Zooniverse workflow from Panoptes.
       workflowId: ID of the workflow, as a string. e.g.: "1234"
       onSucccess: callback function when the fetch succeeds.
@@ -242,7 +270,31 @@ const ZooData = {
           onError();
         });
       };
+  },
+
+  fetchSubject: (subjectId, onSuccess = () => {}, onError = () => {}) => {
+    return (dispatch) => {
+      //Store update: enter "fetching" state.
+      dispatch({ type: FETCH_SUBJECT, subjectId });
+
+      //Asynchronous action
+      apiClient.type('subjects').get(subjectId)
+        .then((subject) => {
+          //Store update: enter "success" state and save fetched data.
+          dispatch({ type: FETCH_SUBJECT_SUCCESS, subjectData: subject });
+
+          onSuccess();
+        })
+
+        .catch((err)=>{
+          //Store update: enter "error" state.
+          dispatch({ type: FETCH_SUBJECT_ERROR, statusMessage: err });
+
+          onError();
+        });
+      };
   }
+
 };
 
 /*
@@ -272,9 +324,13 @@ const getZooDataStateValues = (state) => {
     zooWorkflowId: state[REDUX_STORE_NAME].zooWorkflowId,
     zooWorkflowData: state[REDUX_STORE_NAME].zooWorkflowData,
     zooWorkflowStatus: state[REDUX_STORE_NAME].zooWorkflowStatus,
-    zooWorkflowStatusMessage: state[REDUX_STORE_NAME].zooWorkflowStatusMessage
-  }
-}
+    zooWorkflowStatusMessage: state[REDUX_STORE_NAME].zooWorkflowStatusMessage,
+    zooSubjectId: state[REDUX_STORE_NAME].zooSubjectId,
+    zooSubjectData: state[REDUX_STORE_NAME].zooSubjectData,
+    zooSubjectStatus: state[REDUX_STORE_NAME].zooSubjectStatus,
+    zooSubjectStatusMessage: state[REDUX_STORE_NAME].zooSubjectStatusMessage
+  };
+};
 
 /*
 --------------------------------------------------------------------------------

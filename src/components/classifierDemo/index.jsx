@@ -14,7 +14,12 @@ class ClassifierDemo extends React.Component {
         () => {
           this.props.dispatch(ZooData.fetchWorkflow('2628'));
         }));
+
     }
+  }
+
+  fetchSpecificSubject(){
+    this.props.dispatch(ZooData.fetchSubject('48407'));
   }
 
   render() {
@@ -23,8 +28,12 @@ class ClassifierDemo extends React.Component {
         <h1>Classifier Demo</h1>
         <div className="dashboard">
           <div className="subject-display-area">
-            <div className="subject">Subject</div>
-            <button>New Subject</button>
+            <div className="subject">
+              {this.props.zooSubjectStatus === ZOODATA_STATUS.SUCCESS && this.props.zooSubjectData && (
+                <img src={this.props.zooSubjectData.locations[0]['image/jpeg']} />)}
+            </div>
+            <button onClick={this.fetchSpecificSubject.bind(this)}>Fetch Subject #48407</button>
+            <button>Fetch Next Subject</button>
             <button>Submit Classification</button>
           </div>
           <div className="resource-status">
@@ -38,6 +47,11 @@ class ClassifierDemo extends React.Component {
             <p>Workflow Status: {this.props.zooWorkflowStatus}</p>
             {this.props.zooWorkflowStatusMessage && (
               <p>Workflow Error Message: {this.props.zooWorkflowStatusMessage}</p>)}
+            <hr />
+            <p>Subject Id: {this.props.zooSubjectId}</p>
+            <p>Subject Status: {this.props.zooSubjectStatus}</p>
+            {this.props.zooSubjectStatusMessage && (
+              <p>Subject Error Message: {this.props.zooSubjectStatusMessage}</p>)}
           </div>
         </div>
       </div>

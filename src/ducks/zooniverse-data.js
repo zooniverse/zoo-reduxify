@@ -40,7 +40,7 @@ const ZOODATA_INITIAL_STATE = {
   zooProjectStatusMessage: null,
 };
 
-const zoodataReducer = (state = initialState, action) => {
+const zoodataReducer = (state = ZOODATA_INITIAL_STATE, action) => {
   switch (action.type) {
     case FETCH_PROJECT:
       return Object.assign({}, state, {
@@ -52,7 +52,7 @@ const zoodataReducer = (state = initialState, action) => {
         //Reset all Project dependencies
         //TODO        
       });
-    case FETCH_PROJECT_SUCESS:
+    case FETCH_PROJECT_SUCCESS:
       return Object.assign({}, state, {
         zooProjectData: action.projectData,
         zooProjectStatus: ZOODATA_STATUS.SUCCESS,

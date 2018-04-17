@@ -1,5 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import { ZOODATA_INITIAL_STATE } from '../../ducks/zooniverse-data';
 
 class ClassifierDemo extends React.Component {
   componentDidMount(){
@@ -23,10 +24,17 @@ class ClassifierDemo extends React.Component {
   }
 }
 
+const mapStateToProps = (state) => {
+  return {
+
+
+  };
+};
+
 ClassifierDemo.defaultProps = {
   user: {},
   initialised: false,
-  projectStatus: ''
+  ...ZOODATA_INITIAL_STATE
 };
 
 ClassifierDemo.propTypes = {
@@ -35,5 +43,7 @@ ClassifierDemo.propTypes = {
   dispatch: PropTypes.func,
   projectStatus: PropTypes.string
 };
+
+
 
 export default ClassifierDemo;

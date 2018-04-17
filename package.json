@@ -23,6 +23,7 @@
   },
   "homepage": "https://github.com/zooniverse/zoo-reduxify",
   "dependencies": {
+    "babel-plugin-transform-object-rest-spread": "~6.26.0",
     "history": "~4.6.3",
     "panoptes-client": "~2.9.6",
     "prop-types": "~15.5.10",

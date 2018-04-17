@@ -1,7 +1,10 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
-import { ZOODATA_INITIAL_STATE, ZOODATA_STATUS, ZooData } from '../../ducks/zooniverse-data';
+import {
+  ZooData, getZooDataStateValues,
+  ZOODATA_INITIAL_STATE, ZOODATA_PROPTYPES, ZOODATA_STATUS,
+} from '../../ducks/zooniverse-data';
 
 class ClassifierDemo extends React.Component {
   componentDidMount(){
@@ -44,30 +47,17 @@ class ClassifierDemo extends React.Component {
 
 const mapStateToProps = (state) => {
   return {
-    zooProjectId: state.zooniverseData.zooProjectId,
-    zooProjectData: state.zooniverseData.zooProjectData,
-    zooProjectStatus: state.zooniverseData.zooProjectStatus,
-    zooProjectStatusMessage: state.zooniverseData.zooProjectStatusMessage,
-    zooWorkflowId: state.zooniverseData.zooWorkflowId,
-    zooWorkflowData: state.zooniverseData.zooWorkflowData,
-    zooWorkflowStatus: state.zooniverseData.zooWorkflowStatus,
-    zooWorkflowStatusMessage: state.zooniverseData.zooWorkflowStatusMessage
+    ...getZooDataStateValues(state)
   };
 };
 
 ClassifierDemo.defaultProps = {
-  user: {},
-  initialised: false,
+  dispatch: () => {},
   ...ZOODATA_INITIAL_STATE
 };
 
 ClassifierDemo.propTypes = {
-  user: PropTypes.object,
-  initialised: PropTypes.bool,
   dispatch: PropTypes.func,
-  projectStatus: PropTypes.string
 };
-
-
 
 export default connect(mapStateToProps)(ClassifierDemo);

@@ -11,6 +11,15 @@ Project data, managing Workflow data, and submitting Classifications.
 
 import apiClient from 'panoptes-client/lib/api-client.js';
 
+//TODO
+//const config = {
+//  log: true,  //true/false: show console.log and console.error messages.
+//};
+
+/*
+--------------------------------------------------------------------------------
+ */
+
 // Constants and Action Types
 // --------------------------
 
@@ -29,12 +38,15 @@ const ZOODATA_STATUS = {
   ERROR: 'zooniverse-data/ERROR',
 };
 
+//See ./reducer.js for the store name.
+const REDUX_STORE_NAME = 'zooniverseData';
+
 /*
 --------------------------------------------------------------------------------
  */
 
-// Reducer and Initial State
-// -------------------------
+// Initial State / Default Values
+// ------------------------------
 
 const DEFAULT_PROJECT_VALUES = {
   zooProjectId: null,
@@ -53,6 +65,22 @@ const DEFAULT_WORKFLOW_VALUES = {
 const DEFAULT_SUBJECT_VALUES = {};
 const DEFAULT_CLASSIFICATION_VALUES = {};
 
+/*
+--------------------------------------------------------------------------------
+ */
+
+// React-Redux Helper Objects
+// --------------------------
+
+/*  ZOODATA_INITIAL_STATE defines the default/starting values of the Redux
+    store. To use this in your Redux-connected React components, try...
+    
+    Usage:
+      MyReactComponent.defaultProps = {
+        ...ZOODATA_INITIAL_STATE,
+        otherProp: 'default value'
+      };
+ */
 const ZOODATA_INITIAL_STATE = {
   ...DEFAULT_PROJECT_VALUES,
   ...DEFAULT_WORKFLOW_VALUES,
@@ -60,8 +88,30 @@ const ZOODATA_INITIAL_STATE = {
   ...DEFAULT_CLASSIFICATION_VALUES
 };
 
+/*  ZOODATA_PROPTYPES is used to define the property types of the data, and
+    only matters to Redux-connected React components, and can be used like...
+
+    Usage:
+      MyReactComponent.propTypes = {
+        ...ZOODATA_PROPTYES,
+        otherProp: PropTypes.string,
+      };
+ */
+
+const ZOODATA_PROPTYPES = {
+  //TODO
+};
+
+/*
+--------------------------------------------------------------------------------
+ */
+
 const zoodataReducer = (state = ZOODATA_INITIAL_STATE, action) => {
   switch (action.type) {
+    
+    // Projects
+    // --------------------------------
+    
     case FETCH_PROJECT:
       return Object.assign({}, state, {
         zooProjectId: action.projectId,
@@ -86,16 +136,20 @@ const zoodataReducer = (state = ZOODATA_INITIAL_STATE, action) => {
         zooProjectStatus: ZOODATA_STATUS.ERROR,
         zooProjectStatusMessage: action.statusMessage,
       });
-    //----- Workflows
+    
+    // Workflows
+    // --------------------------------
+
     case FETCH_WORKFLOW:
       return Object.assign({}, state, {
         zooWorkflowId: action.workflowId,
         zooWorkflowData: null,
         zooWorkflowStatus: ZOODATA_STATUS.FETCHING,
-        zooWorkflowStatusMessage: null
+        zooWorkflowStatusMessage: null,
 
-        //Reset all Project dependencies
-        //TODO
+        //Reset all Workflow dependencies
+        ...DEFAULT_SUBJECT_VALUES,
+        ...DEFAULT_CLASSIFICATION_VALUES
       });
     case FETCH_WORKFLOW_SUCCESS:
       return Object.assign({}, state, {
@@ -110,6 +164,13 @@ const zoodataReducer = (state = ZOODATA_INITIAL_STATE, action) => {
         zooWorkflowStatusMessage: action.statusMessage
       });
 
+    // Subjects
+    // --------------------------------
+      
+    //TODO
+
+    // --------------------------------
+
     default:
       return state;
   };
@@ -122,10 +183,18 @@ const zoodataReducer = (state = ZOODATA_INITIAL_STATE, action) => {
 // Action Creators
 // ---------------
 
-const ZooData =  {
+/*  All Zooniverse Data-related actions are packaged into a single "library
+    object" for ease of importing between components.
+ */
+const ZooData = {
+  
+  /*  Fetches a Zooniverse project from Panoptes.
+      projectId: ID of the project, as a string. e.g.: "1234"
+      onSucccess: callback function when the fetch succeeds.
+      onError: callback function when the fetch fails.
+   */
   fetchProject: (projectId, onSuccess = () => {}, onError = () => {}) => {
     return (dispatch) => {
-
       //Store update: enter "fetching" state.
       dispatch({ type: FETCH_PROJECT, projectId });
 
@@ -146,6 +215,12 @@ const ZooData =  {
         });
     };
   },
+    
+  /*  Fetches a Zooniverse workflow from Panoptes.
+      workflowId: ID of the workflow, as a string. e.g.: "1234"
+      onSucccess: callback function when the fetch succeeds.
+      onError: callback function when the fetch fails.
+   */
   fetchWorkflow: (workflowId, onSuccess = () => {}, onError = () => {}) => {
     return (dispatch) => {
       //Store update: enter "fetching" state.
@@ -174,6 +249,9 @@ const ZooData =  {
 --------------------------------------------------------------------------------
  */
 
+// Helper Functions
+// ----------------
+
 /*  Used as a convenience feature in mapStateToProps() functions in
     Redux-connected React components.
 
@@ -185,7 +263,6 @@ const ZooData =  {
         }
       }
  */
-const REDUX_STORE_NAME = 'zooniverseData';  //See ./reducer.js for the store name.
 const getZooDataStateValues = (state) => {
   return {
     zooProjectId: state[REDUX_STORE_NAME].zooProjectId,
@@ -199,6 +276,10 @@ const getZooDataStateValues = (state) => {
   }
 }
 
+/*
+--------------------------------------------------------------------------------
+ */
+
 // Exports
 // -------
 
@@ -208,5 +289,6 @@ export {
   ZooData,
   getZooDataStateValues,
   ZOODATA_INITIAL_STATE,
+  ZOODATA_PROPTYPES,
   ZOODATA_STATUS,
 };

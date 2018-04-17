@@ -32,6 +32,7 @@ const FETCH_WORKFLOW_ERROR = 'zooniverse-data/FETCH_WORKFLOW_ERROR';
 const FETCH_SUBJECT = 'zooniverse-data/FETCH_SUBJECT';
 const FETCH_SUBJECT_SUCCESS = 'zooniverse-data/FETCH_SUBJECT_SUCCESS';
 const FETCH_SUBJECT_ERROR = 'zooniverse-data/FETCH_SUBJECT_ERROR';
+const UPDATE_SUBJECT_QUEUE = 'zooniverse-data/UPDATE_SUBJECT_QUEUE';
 
 const ZOODATA_STATUS = {
   IDLE: 'zooniverse-data/IDLE',
@@ -70,7 +71,9 @@ const DEFAULT_SUBJECT_VALUES = {
   zooSubjectData: null,
   zooSubjectStatus: ZOODATA_STATUS.IDLE,
   zooSubjectStatusMessage: null,
+  zooSubjectQueue: null,
 };
+
 const DEFAULT_CLASSIFICATION_VALUES = {};
 
 /*
@@ -199,6 +202,11 @@ const zoodataReducer = (state = ZOODATA_INITIAL_STATE, action) => {
         zooSubjectStatusMessage: action.statusMessage
       });
 
+    case UPDATE_SUBJECT_QUEUE:
+      return Object.assign({}, state, {
+        zooSubjectQueue: action.subjectQueue
+      });
+
     default:
       return state;
   };
@@ -273,28 +281,72 @@ const ZooData = {
   },
 
   fetchSubject: (subjectId, onSuccess = () => {}, onError = () => {}) => {
-    return (dispatch) => {
-      //Store update: enter "fetching" state.
-      dispatch({ type: FETCH_SUBJECT, subjectId });
+    return (dispatch, getState) => {
 
-      //Asynchronous action
-      apiClient.type('subjects').get(subjectId)
-        .then((subject) => {
+      //Fetch Specific Subject
+      if (subjectId) {
+
+        //Store update: enter "fetching" state.
+        dispatch({ type: FETCH_SUBJECT, subjectId });
+
+        //Asynchronous action
+        apiClient.type('subjects').get(subjectId)
+          .then((subject) => {
+            //Store update: enter "success" state and save fetched data.
+            dispatch({ type: FETCH_SUBJECT_SUCCESS, subjectData: subject });
+
+            onSuccess();
+          })
+
+          .catch((err)=>{
+            //Store update: enter "error" state.
+            dispatch({ type: FETCH_SUBJECT_ERROR, statusMessage: err });
+
+            onError();
+          });
+
+      //Fetch Next Subject In Queue
+      } else {
+        //Store update: enter "fetching" state.
+        dispatch({ type: FETCH_SUBJECT, subjectId });
+        // TODO What if the fetched queue is empty?
+        // Is there a queue and are there subjects in the queue?
+        const store = getState()[REDUX_STORE_NAME];
+        if (store.zooSubjectQueue && store.zooSubjectQueue.length > 0) {
+          const queue = store.zooSubjectQueue.slice();  //Create a copy of the queue.
+          const subject = queue.shift();
+
           //Store update: enter "success" state and save fetched data.
           dispatch({ type: FETCH_SUBJECT_SUCCESS, subjectData: subject });
 
+          //Store update: update the queue.
+          dispatch({ type: UPDATE_SUBJECT_QUEUE, subjectQueue: queue });
           onSuccess();
-        })
+        } else {
+          //Asynchronous action
+          apiClient.type('subjects/queued').get({ workflow_id: store.zooWorkflowId }) // TODO: Maybe make the query more flexible?
+            .then((subjectQueue) => {
+              const queue = subjectQueue.slice();  // Create a copy of the queue.
+              const subject = queue.shift();
 
-        .catch((err)=>{
-          //Store update: enter "error" state.
-          dispatch({ type: FETCH_SUBJECT_ERROR, statusMessage: err });
+              //Store update: enter "success" state and save fetched data.
+              dispatch({ type: FETCH_SUBJECT_SUCCESS, subjectData: subject });
 
-          onError();
-        });
-      };
+              //Store update: update the queue.
+              dispatch({ type: UPDATE_SUBJECT_QUEUE, subjectQueue: queue });
+              onSuccess();
+            })
+            .catch((err)=>{
+              //Store update: enter "error" state.
+              dispatch({ type: FETCH_SUBJECT_ERROR, statusMessage: err });
+
+              onError();
+            });
+        }
+
+      }
+    }
   }
-
 };
 
 /*

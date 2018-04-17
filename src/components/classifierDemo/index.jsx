@@ -22,6 +22,10 @@ class ClassifierDemo extends React.Component {
     this.props.dispatch(ZooData.fetchSubject('48407'));
   }
 
+  fetchNextSubject(){
+    this.props.dispatch(ZooData.fetchSubject());
+  }
+
   render() {
     return (
       <div className="classifier-demo">
@@ -33,7 +37,7 @@ class ClassifierDemo extends React.Component {
                 <img src={this.props.zooSubjectData.locations[0]['image/jpeg']} />)}
             </div>
             <button onClick={this.fetchSpecificSubject.bind(this)}>Fetch Subject #48407</button>
-            <button>Fetch Next Subject</button>
+            <button onClick={this.fetchNextSubject.bind(this)}>Fetch Next Subject</button>
             <button>Submit Classification</button>
           </div>
           <div className="resource-status">

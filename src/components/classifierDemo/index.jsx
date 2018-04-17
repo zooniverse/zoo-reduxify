@@ -1,10 +1,14 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { ZOODATA_INITIAL_STATE } from '../../ducks/zooniverse-data';
+import { connect } from 'react-redux';
+import { ZOODATA_INITIAL_STATE, ZOODATA_STATUS, ZooData } from '../../ducks/zooniverse-data';
 
 class ClassifierDemo extends React.Component {
   componentDidMount(){
     // TODO: fetch the Project data
+    if (this.props.zooProjectStatus === ZOODATA_STATUS.IDLE) {
+      this.props.dispatch(ZooData.fetchProject('1651'));
+    }
   }
 
   render() {
@@ -17,7 +21,13 @@ class ClassifierDemo extends React.Component {
             <button>New Subject</button>
             <button>Submit Classification</button>
           </div>
-          <div className="resource-status">Status of Project Resources</div>
+          <div className="resource-status">
+            <h2>Status of Project Resources</h2>
+            <p>Project Id: {this.props.zooProjectId}</p>
+            <p>Project Status: {this.props.zooProjectStatus}</p>
+            {this.props.zooProjectStatusMessage && (
+              <p>Project Error Message: {this.props.zooProjectStatusMessage}</p>)}
+          </div>
         </div>
       </div>
     );
@@ -26,8 +36,10 @@ class ClassifierDemo extends React.Component {
 
 const mapStateToProps = (state) => {
   return {
-
-
+    zooProjectId: state.zooniverseData.zooProjectId,
+    zooProjectData: state.zooniverseData.zooProjectData,
+    zooProjectStatus: state.zooniverseData.zooProjectStatus,
+    zooProjectStatusMessage: state.zooniverseData.zooProjectStatusMessage
   };
 };
 
@@ -46,4 +58,4 @@ ClassifierDemo.propTypes = {
 
 
 
-export default ClassifierDemo;
+export default connect(mapStateToProps)(ClassifierDemo);

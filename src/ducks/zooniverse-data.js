@@ -174,6 +174,31 @@ const ZooData =  {
 --------------------------------------------------------------------------------
  */
 
+/*  Used as a convenience feature in mapStateToProps() functions in
+    Redux-connected React components.
+
+    Usage:
+      mapStateToProps = (state) => {
+        return {
+          ...getZooDataStateValues(state),
+          someOtherValue: state.someOtherStore.someOtherValue
+        }
+      }
+ */
+const REDUX_STORE_NAME = 'zooniverseData';  //See ./reducer.js for the store name.
+const getZooDataStateValues = (state) => {
+  return {
+    zooProjectId: state[REDUX_STORE_NAME].zooProjectId,
+    zooProjectData: state[REDUX_STORE_NAME].zooProjectData,
+    zooProjectStatus: state[REDUX_STORE_NAME].zooProjectStatus,
+    zooProjectStatusMessage: state[REDUX_STORE_NAME].zooProjectStatusMessage,
+    zooWorkflowId: state[REDUX_STORE_NAME].zooWorkflowId,
+    zooWorkflowData: state[REDUX_STORE_NAME].zooWorkflowData,
+    zooWorkflowStatus: state[REDUX_STORE_NAME].zooWorkflowStatus,
+    zooWorkflowStatusMessage: state[REDUX_STORE_NAME].zooWorkflowStatusMessage
+  }
+}
+
 // Exports
 // -------
 
@@ -181,6 +206,7 @@ export default zoodataReducer;
 
 export {
   ZooData,
+  getZooDataStateValues,
   ZOODATA_INITIAL_STATE,
   ZOODATA_STATUS,
 };

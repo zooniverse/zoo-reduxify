@@ -144,7 +144,7 @@ const ZooData =  {
 
           onError();
         });
-    }
+    };
   },
   fetchWorkflow: (workflowId, onSuccess = () => {}, onError = () => {}) => {
     return (dispatch) => {

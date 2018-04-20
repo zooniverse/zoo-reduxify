@@ -80,8 +80,8 @@ const DEFAULT_CLASSIFICATION_VALUES = {};
 --------------------------------------------------------------------------------
  */
 
-// React-Redux Helper Objects
-// --------------------------
+// React-Redux Helper Objects/Functions
+// ------------------------------------
 
 /*  ZOODATA_INITIAL_STATE defines the default/starting values of the Redux
     store. To use this in your Redux-connected React components, try...
@@ -113,9 +113,40 @@ const ZOODATA_PROPTYPES = {
   //TODO
 };
 
+/*  Used as a convenience feature in mapStateToProps() functions in
+    Redux-connected React components.
+
+    Usage:
+      mapStateToProps = (state) => {
+        return {
+          ...getZooDataStateValues(state),
+          someOtherValue: state.someOtherStore.someOtherValue
+        }
+      }
+ */
+const getZooDataStateValues = (state) => {
+  return {
+    zooProjectId: state[REDUX_STORE_NAME].zooProjectId,
+    zooProjectData: state[REDUX_STORE_NAME].zooProjectData,
+    zooProjectStatus: state[REDUX_STORE_NAME].zooProjectStatus,
+    zooProjectStatusMessage: state[REDUX_STORE_NAME].zooProjectStatusMessage,
+    zooWorkflowId: state[REDUX_STORE_NAME].zooWorkflowId,
+    zooWorkflowData: state[REDUX_STORE_NAME].zooWorkflowData,
+    zooWorkflowStatus: state[REDUX_STORE_NAME].zooWorkflowStatus,
+    zooWorkflowStatusMessage: state[REDUX_STORE_NAME].zooWorkflowStatusMessage,
+    zooSubjectId: state[REDUX_STORE_NAME].zooSubjectId,
+    zooSubjectData: state[REDUX_STORE_NAME].zooSubjectData,
+    zooSubjectStatus: state[REDUX_STORE_NAME].zooSubjectStatus,
+    zooSubjectStatusMessage: state[REDUX_STORE_NAME].zooSubjectStatusMessage
+  };
+};
+
 /*
 --------------------------------------------------------------------------------
  */
+
+// Redux Reducer
+// -------------
 
 const zoodataReducer = (state = ZOODATA_INITIAL_STATE, action) => {
   switch (action.type) {
@@ -143,7 +174,6 @@ const zoodataReducer = (state = ZOODATA_INITIAL_STATE, action) => {
       });
     case FETCH_PROJECT_ERROR:
       return Object.assign({}, state, {
-        zooProjectData: action.projectData,
         zooProjectStatus: ZOODATA_STATUS.ERROR,
         zooProjectStatusMessage: action.statusMessage,
       });
@@ -170,16 +200,20 @@ const zoodataReducer = (state = ZOODATA_INITIAL_STATE, action) => {
       });
     case FETCH_WORKFLOW_ERROR:
       return Object.assign({}, state, {
-        zooWorkflowData: action.workflowData,
         zooWorkflowStatus: ZOODATA_STATUS.ERROR,
         zooWorkflowStatusMessage: action.statusMessage
       });
 
     // Subjects
     // --------------------------------
+
     case FETCH_SUBJECT:
       return Object.assign({}, state, {
         zooSubjectId: action.subjectId,
+        //Note: if fetchSubject() is called without a specific ID (i.e. using
+        //the subject queue), this will be undefined at first, until the queue
+        //is fetched.
+        
         zooSubjectData: null,
         zooSubjectStatus: ZOODATA_STATUS.FETCHING,
         zooSubjectStatusMessage: null,
@@ -190,6 +224,12 @@ const zoodataReducer = (state = ZOODATA_INITIAL_STATE, action) => {
 
     case FETCH_SUBJECT_SUCCESS:
       return Object.assign({}, state, {
+        zooSubjectId: (action.subjectData)
+          ? action.subjectData.id : state.zooSubjectId,
+        //Note: This "update subject id" logic is redunant if fetchSubject() is
+        //called with a specific ID, but necessary if called without an ID
+        //(i.e. uses the subject queue).
+        
         zooSubjectData: action.subjectData,
         zooSubjectStatus: ZOODATA_STATUS.SUCCESS,
         zooSubjectStatusMessage: null
@@ -197,7 +237,6 @@ const zoodataReducer = (state = ZOODATA_INITIAL_STATE, action) => {
 
     case FETCH_SUBJECT_ERROR:
       return Object.assign({}, state, {
-        zooSubjectData: action.subjectData,
         zooSubjectStatus: ZOODATA_STATUS.ERROR,
         zooSubjectStatusMessage: action.statusMessage
       });
@@ -219,169 +258,169 @@ const zoodataReducer = (state = ZOODATA_INITIAL_STATE, action) => {
 // Action Creators
 // ---------------
 
-/*  All Zooniverse Data-related actions are packaged into a single "library
-    object" for ease of importing between components.
+/*  Fetches a Zooniverse project from Panoptes.
+    projectId: ID of the project, as a string. e.g.: "1234"
  */
-const ZooData = {
+const fetchProject = (projectId) => {
+  return (dispatch) => {
+    //Store update: enter "fetching" state.
+    dispatch({ type: FETCH_PROJECT, projectId });
 
-  /*  Fetches a Zooniverse project from Panoptes.
-      projectId: ID of the project, as a string. e.g.: "1234"
-      onSucccess: callback function when the fetch succeeds.
-      onError: callback function when the fetch fails.
-   */
-  fetchProject: (projectId, onSuccess = () => {}, onError = () => {}) => {
-    return (dispatch) => {
-      //Store update: enter "fetching" state.
-      dispatch({ type: FETCH_PROJECT, projectId });
+    //Asynchronous action
+    //Remember to `return` the apiClient to allow Promise-chaining.
+    return apiClient.type('projects').get(projectId)
+      .then((project) => {
+        //Sanity check
+        if (!project) { throw new Error('ZooData.fetchProject() error: no project data'); }
 
-      //Asynchronous action
-      apiClient.type('projects').get(projectId)
-        .then((project) => {
-          //Store update: enter "success" state and save fetched data.
-          dispatch({ type: FETCH_PROJECT_SUCCESS, projectData: project });
+        //Store update: enter "success" state and save fetched data.
+        dispatch({ type: FETCH_PROJECT_SUCCESS, projectData: project });
 
-          onSuccess();
-        })
+        //Endpoint: Success
+        return project;
+      })
 
-        .catch((err) => {
-          //Store update: enter "error" state.
-          dispatch({ type: FETCH_PROJECT_ERROR, statusMessage: err });
+      .catch((err) => {
+        //Store update: enter "error" state.
+        dispatch({ type: FETCH_PROJECT_ERROR, statusMessage: err });
 
-          onError();
-        });
+        //Endpoint: Error
+        throw(err);
+      });
+  };
+};
+
+/*  Fetches a Zooniverse workflow from Panoptes.
+    workflowId: ID of the workflow, as a string. e.g.: "1234"
+ */
+const fetchWorkflow = (workflowId) => {
+  return (dispatch) => {
+    //Store update: enter "fetching" state.
+    dispatch({ type: FETCH_WORKFLOW, workflowId });
+
+    //Asynchronous action
+    //Remember to `return` the apiClient to allow Promise-chaining.
+    return apiClient.type('workflows').get(workflowId)
+      .then((workflow)=>{
+        //Sanity check
+        if (!workflow) { throw new Error('ZooData.fetchWorkflow() error: no workflow data'); }
+
+        //Store update: enter "success" state and save fetched data.
+        dispatch({ type: FETCH_WORKFLOW_SUCCESS, workflowData: workflow });
+
+        //Endpoint: Success
+        return workflow;
+      })
+
+      .catch((err)=>{
+        //Store update: enter "error" state.
+        dispatch({ type: FETCH_WORKFLOW_ERROR, statusMessage: err });
+
+        //Endpoint: Error
+        throw(err);
+      });
     };
-  },
+};
 
-  /*  Fetches a Zooniverse workflow from Panoptes.
-      workflowId: ID of the workflow, as a string. e.g.: "1234"
-      onSucccess: callback function when the fetch succeeds.
-      onError: callback function when the fetch fails.
-   */
-  fetchWorkflow: (workflowId, onSuccess = () => {}, onError = () => {}) => {
-    return (dispatch) => {
+/*  Fetches a Zooniverse subject from Panoptes.
+    subjectId: OPTIONAL. ID of the subject, as a string. e.g.: "1234"
+      If unspecified (undefined), fetches from list of queued subjects.
+ */
+const fetchSubject = (subjectId = undefined) => {
+  return (dispatch, getState) => {
+
+    //Fetch Specific Subject
+    if (subjectId) {
+
       //Store update: enter "fetching" state.
-      dispatch({ type: FETCH_WORKFLOW, workflowId });
+      dispatch({ type: FETCH_SUBJECT, subjectId });
 
       //Asynchronous action
-      apiClient.type('workflows').get(workflowId)
-        .then((workflow)=>{
-          //Store update: enter "success" state and save fetched data.
-          dispatch({ type: FETCH_WORKFLOW_SUCCESS, workflowData: workflow });
-
-          onSuccess();
-        })
-
-        .catch((err)=>{
-          //Store update: enter "error" state.
-          dispatch({ type: FETCH_WORKFLOW_ERROR, statusMessage: err });
-
-          onError();
-        });
-      };
-  },
-
-  fetchSubject: (subjectId, onSuccess = () => {}, onError = () => {}) => {
-    return (dispatch, getState) => {
-
-      //Fetch Specific Subject
-      if (subjectId) {
-
-        //Store update: enter "fetching" state.
-        dispatch({ type: FETCH_SUBJECT, subjectId });
-
-        //Asynchronous action
-        apiClient.type('subjects').get(subjectId)
-          .then((subject) => {
-            //Store update: enter "success" state and save fetched data.
-            dispatch({ type: FETCH_SUBJECT_SUCCESS, subjectData: subject });
-
-            onSuccess();
-          })
-
-          .catch((err)=>{
-            //Store update: enter "error" state.
-            dispatch({ type: FETCH_SUBJECT_ERROR, statusMessage: err });
-
-            onError();
-          });
-
-      //Fetch Next Subject In Queue
-      } else {
-        //Store update: enter "fetching" state.
-        dispatch({ type: FETCH_SUBJECT, subjectId });
-        // TODO What if the fetched queue is empty?
-        // Is there a queue and are there subjects in the queue?
-        const store = getState()[REDUX_STORE_NAME];
-        if (store.zooSubjectQueue && store.zooSubjectQueue.length > 0) {
-          const queue = store.zooSubjectQueue.slice();  //Create a copy of the queue.
-          const subject = queue.shift();
+      //Remember to `return` the apiClient to allow Promise-chaining.
+      return apiClient.type('subjects').get(subjectId)
+        .then((subject) => {
+          //Sanity check
+          if (!subject) { throw new Error('ZooData.fetchSubject() error: no subject data'); }
 
           //Store update: enter "success" state and save fetched data.
           dispatch({ type: FETCH_SUBJECT_SUCCESS, subjectData: subject });
 
-          //Store update: update the queue.
-          dispatch({ type: UPDATE_SUBJECT_QUEUE, subjectQueue: queue });
-          onSuccess();
-        } else {
-          //Asynchronous action
-          apiClient.type('subjects/queued').get({ workflow_id: store.zooWorkflowId }) // TODO: Maybe make the query more flexible?
-            .then((subjectQueue) => {
-              const queue = subjectQueue.slice();  // Create a copy of the queue.
-              const subject = queue.shift();
+          //Endpoint: Success
+          return subject;
+        })
 
-              //Store update: enter "success" state and save fetched data.
-              dispatch({ type: FETCH_SUBJECT_SUCCESS, subjectData: subject });
+        .catch((err)=>{
+          //Store update: enter "error" state.
+          dispatch({ type: FETCH_SUBJECT_ERROR, statusMessage: err });
 
-              //Store update: update the queue.
-              dispatch({ type: UPDATE_SUBJECT_QUEUE, subjectQueue: queue });
-              onSuccess();
-            })
-            .catch((err)=>{
-              //Store update: enter "error" state.
-              dispatch({ type: FETCH_SUBJECT_ERROR, statusMessage: err });
+          //Endpoint: Error
+          throw(err);
+        });
 
-              onError();
-            });
-        }
+    //Fetch Next Subject In Queue
+    } else {
+      //Store update: enter "fetching" state.
+      dispatch({ type: FETCH_SUBJECT, subjectId: undefined });
+      //TODO What if the fetched queue is empty?
 
+      //Is there a queue and are there subjects in the queue?
+      const store = getState()[REDUX_STORE_NAME];
+      if (store.zooSubjectQueue && store.zooSubjectQueue.length > 0) {
+        const queue = store.zooSubjectQueue.slice();  //Create a copy of the queue.
+        const subject = queue.shift();
+
+        //Store update: enter "success" state and save fetched data.
+        dispatch({ type: FETCH_SUBJECT_SUCCESS, subjectData: subject });
+
+        //Store update: update the queue.
+        dispatch({ type: UPDATE_SUBJECT_QUEUE, subjectQueue: queue });
+
+        //Endpoint: Success
+        return subject;
+
+      //If there's no queue, or the queue's empty, fetch a fresh new one.
+      } else {
+
+        //Asynchronous action
+        //Remember to `return` the apiClient to allow Promise-chaining.
+        return apiClient.type('subjects/queued').get({ workflow_id: store.zooWorkflowId }) // TODO: Maybe make the query more flexible?
+          .then((subjectQueue) => {
+            //Sanity check
+            if (!subjectQueue || subjectQueue.length === 0) {
+              throw new Error('ZooData.fetchSubject() error: invalid subject queue');
+            }
+
+            const queue = subjectQueue.slice();  // Create a copy of the queue.
+            const subject = queue.shift();
+
+            //Store update: enter "success" state and save fetched data.
+            dispatch({ type: FETCH_SUBJECT_SUCCESS, subjectData: subject });
+
+            //Store update: update the queue.
+            dispatch({ type: UPDATE_SUBJECT_QUEUE, subjectQueue: queue });
+
+            //Endpoint: Success
+            return subject;
+          })
+          .catch((err)=>{
+            //Store update: enter "error" state.
+            dispatch({ type: FETCH_SUBJECT_ERROR, statusMessage: err });
+
+            //Endpoint: Error
+            throw(err);
+          });
       }
     }
   }
 };
 
-/*
---------------------------------------------------------------------------------
+/*  All Zooniverse Data-related actions are packaged into a single "library
+    object" for ease of importing between components.
  */
-
-// Helper Functions
-// ----------------
-
-/*  Used as a convenience feature in mapStateToProps() functions in
-    Redux-connected React components.
-
-    Usage:
-      mapStateToProps = (state) => {
-        return {
-          ...getZooDataStateValues(state),
-          someOtherValue: state.someOtherStore.someOtherValue
-        }
-      }
- */
-const getZooDataStateValues = (state) => {
-  return {
-    zooProjectId: state[REDUX_STORE_NAME].zooProjectId,
-    zooProjectData: state[REDUX_STORE_NAME].zooProjectData,
-    zooProjectStatus: state[REDUX_STORE_NAME].zooProjectStatus,
-    zooProjectStatusMessage: state[REDUX_STORE_NAME].zooProjectStatusMessage,
-    zooWorkflowId: state[REDUX_STORE_NAME].zooWorkflowId,
-    zooWorkflowData: state[REDUX_STORE_NAME].zooWorkflowData,
-    zooWorkflowStatus: state[REDUX_STORE_NAME].zooWorkflowStatus,
-    zooWorkflowStatusMessage: state[REDUX_STORE_NAME].zooWorkflowStatusMessage,
-    zooSubjectId: state[REDUX_STORE_NAME].zooSubjectId,
-    zooSubjectData: state[REDUX_STORE_NAME].zooSubjectData,
-    zooSubjectStatus: state[REDUX_STORE_NAME].zooSubjectStatus,
-    zooSubjectStatusMessage: state[REDUX_STORE_NAME].zooSubjectStatusMessage
-  };
+const ZooData = {
+  fetchProject,
+  fetchWorkflow,
+  fetchSubject,
 };
 
 /*

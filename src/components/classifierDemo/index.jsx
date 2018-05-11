@@ -2,7 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import {
-  ZooData, getZooDataStateValues,
+  ZooData, ZOODATA_MAP_STATE,
   ZOODATA_INITIAL_STATE, ZOODATA_PROPTYPES, ZOODATA_STATUS,
 } from '../../ducks/zooniverse-data';
 
@@ -60,7 +60,7 @@ class ClassifierDemo extends React.Component {
     // Fetch Subject
     // --------------------------------
     this.props.dispatch(ZooData.fetchSubject(DEFAULT_SAMPLE_SUBJECT_ID))
-      .then((subject)=>{
+      .then((subject) => {
         console.log('+++ ClassifierDemo: successfully fetched subject! ', subject);
       })
       .catch((err) => {
@@ -69,13 +69,36 @@ class ClassifierDemo extends React.Component {
     // --------------------------------
   }
 
-  fetchNextSubject(){
+  fetchNextSubject() {
     
     // Fetch Subject
     // --------------------------------
     this.props.dispatch(ZooData.fetchSubject())
-      .then((subject)=>{
+      .then((subject) => {
         console.log('+++ ClassifierDemo: successfully fetched subject! ', subject);
+      })
+      .catch((err) => {
+        console.error('+++ ClassifierDemo error: ', err);
+      });
+    // --------------------------------
+  }
+
+  submitClasification() {
+    
+    // Submit Classification
+    // --------------------------------
+    
+    //Add an object to the annotation, because otherwise, we can't submit to Panoptes.
+    this.props.dispatch(ZooData.updateClassification({annotations:[{}]}));
+    
+    //Submit!
+    this.props.dispatch(ZooData.submitClassification())
+      .then((classification) => {
+        console.log('+++ ClassifierDemo: successfully sent classification! ', classification);
+        return this.props.dispatch(ZooData.fetchSubject());
+      })
+      .then((subject) => {
+        console.log('+++ ClassifierDemo: OK, time for the next one... ', subject);
       })
       .catch((err) => {
         console.error('+++ ClassifierDemo error: ', err);
@@ -89,13 +112,16 @@ class ClassifierDemo extends React.Component {
         <h1>Classifier Demo</h1>
         <div className="dashboard">
           <div className="subject-display-area">
+            <div>
+              <button onClick={this.fetchSpecificSubject.bind(this)}>Fetch Subject #{DEFAULT_SAMPLE_SUBJECT_ID}</button>
+              <button onClick={this.fetchNextSubject.bind(this)}>Fetch Next Subject</button>
+              {(!this.props.zooSubjectData) ? null :
+                <button onClick={this.submitClasification.bind(this)}>Submit Classification</button>}
+            </div>
             <div className="subject">
               {this.props.zooSubjectStatus === ZOODATA_STATUS.SUCCESS && this.props.zooSubjectData && (
                 <img src={this.props.zooSubjectData.locations[0]['image/jpeg']} />)}
             </div>
-            <button onClick={this.fetchSpecificSubject.bind(this)}>Fetch Subject #{DEFAULT_SAMPLE_SUBJECT_ID}</button>
-            <button onClick={this.fetchNextSubject.bind(this)}>Fetch Next Subject</button>
-            <button>Submit Classification</button>
           </div>
           <div className="resource-status">
             <h2>Status of Project Resources</h2>
@@ -113,6 +139,10 @@ class ClassifierDemo extends React.Component {
             <p>Subject Status: {this.props.zooSubjectStatus}</p>
             {this.props.zooSubjectStatusMessage && (
               <p>Subject Error Message: {this.props.zooSubjectStatusMessage.toString()}</p>)}
+            <hr />
+            <p>Classification Status: {this.props.zooClassificationStatus}</p>
+            {this.props.zooSubjectStatusMessage && (
+              <p>Classification Error Message: {this.props.zooClassificationStatusMessage.toString()}</p>)}
           </div>
         </div>
       </div>
@@ -122,7 +152,7 @@ class ClassifierDemo extends React.Component {
 
 const mapStateToProps = (state) => {
   return {
-    ...getZooDataStateValues(state)
+    ...ZOODATA_MAP_STATE(state)
   };
 };
 

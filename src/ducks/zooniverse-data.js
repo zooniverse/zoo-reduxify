@@ -33,6 +33,11 @@ const FETCH_SUBJECT = 'zooniverse-data/FETCH_SUBJECT';
 const FETCH_SUBJECT_SUCCESS = 'zooniverse-data/FETCH_SUBJECT_SUCCESS';
 const FETCH_SUBJECT_ERROR = 'zooniverse-data/FETCH_SUBJECT_ERROR';
 const UPDATE_SUBJECT_QUEUE = 'zooniverse-data/UPDATE_SUBJECT_QUEUE';
+const CREATE_CLASSIFICATION = 'zooniverse-data/CREATE_CLASSIFICATION';
+const UPDATE_CLASSIFICATION = 'zooniverse-data/UPDATE_CLASSIFICATION';
+const SUBMIT_CLASSIFICATION = 'zooniverse-data/SUBMIT_CLASSIFICATION';
+const SUBMIT_CLASSIFICATION_SUCCESS = 'zooniverse-data/SUBMIT_CLASSIFICATION_SUCCESS';
+const SUBMIT_CLASSIFICATION_ERROR = 'zooniverse-data/SUBMIT_CLASSIFICATION_ERROR';
 
 const ZOODATA_STATUS = {
   IDLE: 'zooniverse-data/IDLE',
@@ -74,7 +79,11 @@ const DEFAULT_SUBJECT_VALUES = {
   zooSubjectQueue: null,
 };
 
-const DEFAULT_CLASSIFICATION_VALUES = {};
+const DEFAULT_CLASSIFICATION_VALUES = {
+  zooClassificationObject: null,
+  zooClassificationStatus: ZOODATA_STATUS.IDLE,
+  zooClassificationStatusMessage: null,
+};
 
 /*
 --------------------------------------------------------------------------------
@@ -96,7 +105,7 @@ const ZOODATA_INITIAL_STATE = {
   ...DEFAULT_PROJECT_VALUES,
   ...DEFAULT_WORKFLOW_VALUES,
   ...DEFAULT_SUBJECT_VALUES,
-  ...DEFAULT_CLASSIFICATION_VALUES
+  ...DEFAULT_CLASSIFICATION_VALUES,
 };
 
 /*  ZOODATA_PROPTYPES is used to define the property types of the data, and
@@ -113,32 +122,23 @@ const ZOODATA_PROPTYPES = {
   //TODO
 };
 
-/*  Used as a convenience feature in mapStateToProps() functions in
-    Redux-connected React components.
+/*  ZOODATA_MAP_STATE is used as a convenience feature in mapStateToProps()
+    functions in Redux-connected React components.
 
     Usage:
       mapStateToProps = (state) => {
         return {
-          ...getZooDataStateValues(state),
+          ...ZOODATA_MAP_STATE(state),
           someOtherValue: state.someOtherStore.someOtherValue
         }
       }
  */
-const getZooDataStateValues = (state) => {
-  return {
-    zooProjectId: state[REDUX_STORE_NAME].zooProjectId,
-    zooProjectData: state[REDUX_STORE_NAME].zooProjectData,
-    zooProjectStatus: state[REDUX_STORE_NAME].zooProjectStatus,
-    zooProjectStatusMessage: state[REDUX_STORE_NAME].zooProjectStatusMessage,
-    zooWorkflowId: state[REDUX_STORE_NAME].zooWorkflowId,
-    zooWorkflowData: state[REDUX_STORE_NAME].zooWorkflowData,
-    zooWorkflowStatus: state[REDUX_STORE_NAME].zooWorkflowStatus,
-    zooWorkflowStatusMessage: state[REDUX_STORE_NAME].zooWorkflowStatusMessage,
-    zooSubjectId: state[REDUX_STORE_NAME].zooSubjectId,
-    zooSubjectData: state[REDUX_STORE_NAME].zooSubjectData,
-    zooSubjectStatus: state[REDUX_STORE_NAME].zooSubjectStatus,
-    zooSubjectStatusMessage: state[REDUX_STORE_NAME].zooSubjectStatusMessage
-  };
+const ZOODATA_MAP_STATE = (state) => {
+  const mappedObject = {};
+  Object.keys(ZOODATA_INITIAL_STATE).map((key) => {
+    mappedObject[key] = state[REDUX_STORE_NAME][key];
+  });
+  return mappedObject;
 };
 
 /*
@@ -245,6 +245,40 @@ const zoodataReducer = (state = ZOODATA_INITIAL_STATE, action) => {
       return Object.assign({}, state, {
         zooSubjectQueue: action.subjectQueue
       });
+      
+    
+    // Classifications
+    // --------------------------------
+    
+    case CREATE_CLASSIFICATION:
+      return Object.assign({}, state, {
+        zooClassificationObject: action.classification,
+        zooClassificationStatus: ZOODATA_STATUS.IDLE,
+        zooClassificationStatusMessage: null,
+      });
+    
+    case UPDATE_CLASSIFICATION:
+      return Object.assign({}, state, {
+        zooClassificationObject: action.classification,
+      });
+    
+    case SUBMIT_CLASSIFICATION:
+      return Object.assign({}, state, {
+        zooClassificationStatus: ZOODATA_STATUS.SENDING,
+      });
+    
+    case SUBMIT_CLASSIFICATION_SUCCESS:
+      return Object.assign({}, state, {
+        zooClassificationStatus: ZOODATA_STATUS.SUCCESS,
+      });
+    
+    case SUBMIT_CLASSIFICATION_ERROR:
+      return Object.assign({}, state, {
+        zooClassificationStatus: ZOODATA_STATUS.ERROR,
+        zooClassificationStatusMessage: action.statusMessage,
+      });
+      
+    // --------------------------------
 
     default:
       return state;
@@ -344,6 +378,9 @@ const fetchSubject = (subjectId = undefined) => {
 
           //Store update: enter "success" state and save fetched data.
           dispatch({ type: FETCH_SUBJECT_SUCCESS, subjectData: subject });
+        
+          //Create a new classification for this subject.
+          dispatch(ZooData.createClassification());
 
           //Endpoint: Success
           return subject;
@@ -371,6 +408,9 @@ const fetchSubject = (subjectId = undefined) => {
 
         //Store update: enter "success" state and save fetched data.
         dispatch({ type: FETCH_SUBJECT_SUCCESS, subjectData: subject });
+        
+        //Create a new classification for this subject.
+        dispatch(ZooData.createClassification());
 
         //Store update: update the queue.
         dispatch({ type: UPDATE_SUBJECT_QUEUE, subjectQueue: queue });
@@ -395,6 +435,9 @@ const fetchSubject = (subjectId = undefined) => {
 
             //Store update: enter "success" state and save fetched data.
             dispatch({ type: FETCH_SUBJECT_SUCCESS, subjectData: subject });
+          
+            //Create a new classification for this subject.
+            dispatch(ZooData.createClassification());
 
             //Store update: update the queue.
             dispatch({ type: UPDATE_SUBJECT_QUEUE, subjectQueue: queue });
@@ -414,6 +457,130 @@ const fetchSubject = (subjectId = undefined) => {
   }
 };
 
+/*  Creates a Zooniverse classification for the current Zooniverse subject;
+    this classification is the user's "answer" that will be submitted to
+    Panoptes.
+    annotations: OPTIONAL. The initial annotations for the classification. This
+      field is OK to leave blank at the "create classification" stage, because
+      usually, the CFE manually updates this field right before the "submit
+      classification" step.
+    metadata: OPTIONAL.
+ */
+const createClassification = (annotations = [], metadata = {}) => {
+  return (dispatch, getState) => {
+    //Sanity check
+    const store = getState()[REDUX_STORE_NAME];
+    const project = store.zooProjectData;
+    const workflow = store.zooWorkflowData;
+    const subject = store.zooSubjectData;
+    if (!project || !workflow || !subject) { throw new Error('ZooData.createClassification() error: no project, workflow, and/or subject data'); }
+
+    const classificationData = {
+      annotations,
+      metadata: {
+        workflow_version: workflow.version,
+        started_at: (new Date()).toISOString(),
+        finished_at: (new Date()).toISOString(),
+        user_agent: (window.navigator) ? window.navigator.userAgent : '',
+        user_language: '',
+        utc_offset: ((new Date()).getTimezoneOffset() * 60).toString(),
+        subject_dimensions: subject.imageMetadata,
+        ...metadata,
+      },
+      links: {
+        project: store.zooProjectId,
+        workflow: store.zooWorkflowId,
+        subjects: [store.zooSubjectId]
+      }
+    };
+
+    const classification = apiClient.type('classifications').create(classificationData);
+    classification._workflow = workflow;  //Warning: voodoo. Not sure what this is for, but it's used in PFE. (@shaun.a.noordin 20180511)
+    classification._subjects = [subject];  //Warning: voodoo.
+
+    //Store update: new classification created.
+    dispatch({ type: CREATE_CLASSIFICATION, classification });
+    
+    //Endpoint
+    return classification;  //Return, to allow Promise chaining.
+  }
+}
+
+/*  Updates a Zooniverse classification. e.g. let's say you want to add new
+    annotations to the classification right before submitClassification().
+    
+    Example:
+      dispatch(updateClassification({
+        annotations: [{ task:'T1', x:16, y:32, value:'apples' }],
+        completed: true,
+        'metadata.finished_at': (new Date()).toISOString(),
+      })).then(()=>{
+        dispatch(submitClassification());
+      });
+    
+    WARNING: This method is mildly unreliable in triggering React component
+    renders, since the _pointer_ to the classificationObject (the pointer is
+    what's recorded in the store, not the object) doesn't change.
+ */
+const updateClassification = (classificationData) => {
+  return (dispatch, getState) => {
+    //Sanity check
+    const store = getState()[REDUX_STORE_NAME];
+    const classification = store.zooClassificationObject;
+    if (!classification) { throw new Error('ZooData.updateClassification() error: no classification to update'); }
+    
+    classification.update(classificationData);
+    
+    //Store update: new classification created.
+    dispatch({ type: CREATE_CLASSIFICATION, classification });
+    
+    //Endpoint
+    return classification;  //Return, to allow Promise chaining.
+  }
+}
+
+/*  Submit a Zooniverse classification.
+    extraClassificationData: OPTIONAL. Adds final metadata to the classification
+      before submission.
+    
+    WARNING: cannot submit if classification.annotations is empty.
+ */
+const submitClassification = (extraClassificationData = {}) => {
+  return (dispatch, getState) => {
+    //Sanity check
+    const store = getState()[REDUX_STORE_NAME];
+    const classification = store.zooClassificationObject;
+    if (!classification) { throw new Error('ZooData.submitClassification() error: no classification to submit'); }
+    
+    //Store update: enter "sending" state.
+    dispatch({ type: SUBMIT_CLASSIFICATION });
+    
+    return classification
+      .update({  //pre-submission update
+        completed: true,
+        'metadata.finished_at': (new Date()).toISOString(),
+        ...extraClassificationData,
+      })
+      .save()
+
+      .then((data) => {
+        //Store update: enter "success" state.
+        dispatch({ type: SUBMIT_CLASSIFICATION_SUCCESS });
+
+        //Endpoint: success
+        return data;
+      })
+    
+      .catch((err) => {
+        //Store update: enter "error" state.
+        dispatch({ type: SUBMIT_CLASSIFICATION_ERROR });
+
+        //Endpoint: error
+        throw(err);
+      });
+  }
+};
+
 /*  All Zooniverse Data-related actions are packaged into a single "library
     object" for ease of importing between components.
  */
@@ -421,6 +588,9 @@ const ZooData = {
   fetchProject,
   fetchWorkflow,
   fetchSubject,
+  createClassification,
+  updateClassification,
+  submitClassification,
 };
 
 /*
@@ -434,7 +604,7 @@ export default zoodataReducer;
 
 export {
   ZooData,
-  getZooDataStateValues,
+  ZOODATA_MAP_STATE,
   ZOODATA_INITIAL_STATE,
   ZOODATA_PROPTYPES,
   ZOODATA_STATUS,

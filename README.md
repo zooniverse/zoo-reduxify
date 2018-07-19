@@ -1,5 +1,3 @@
-[![bitHound Score](https://www.bithound.io/github/Granze/react-starterify/badges/score.svg)](https://www.bithound.io/github/zooniverse/zoo-react-starterify/master)
-
 # Zooniverse Reduxify
 
 A minimal Redux application starter kit, based on [Zooniverse React Starterify](https://github.com/zooniverse/zoo-react-starterify).

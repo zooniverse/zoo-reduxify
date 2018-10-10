@@ -5,24 +5,19 @@ const DashboardPlugin = require('webpack-dashboard/plugin');
 const nib = require('nib');
 
 module.exports = {
+  mode: 'development',
   devtool: 'eval-source-map',
   devServer: {
+    allowedHosts: [
+      '.zooniverse.org'
+    ],
+    historyApiFallback: true,
     contentBase: path.join(__dirname, '/src/'),
-    hot: true,
     inline: true,
-    stats: {
-      colors: true,
-      hash: false,
-      timings: true,
-      chunks: false,
-      chunkModules: false,
-      modules: false
-    },
-    port: 3000 // Change this for your project
+    port: 3005 // Change this for your project
   },
   entry: [
     'eventsource-polyfill', // necessary for hot reloading with IE
-    'react-hot-loader/patch',
     path.join(__dirname, 'src/index.jsx')
   ],
 
@@ -39,11 +34,7 @@ module.exports = {
       filename: 'index.html',
       gtm: ''
     }),
-    new webpack.HotModuleReplacementPlugin(),
     new webpack.NoEmitOnErrorsPlugin(),
-    new webpack.DefinePlugin({
-      'process.env.NODE_ENV': JSON.stringify('staging')
-    }),
     new DashboardPlugin({ port: 3001 }) // Change this here and in the package.json start script if needed
   ],
 

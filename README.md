@@ -1,5 +1,7 @@
 # Zooniverse Reduxify
 
+DEPRECATED. See [zooniverse/front-end-monorepo](https://github.com/zooniverse/front-end-monorepo), which is in active development, for new Zooniverse front-end code.
+
 A minimal Redux application starter kit, based on [Zooniverse React Starterify](https://github.com/zooniverse/zoo-react-starterify).
 
 ## Usage
